@@ -12,7 +12,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS 样式优化 (核心：把按钮变成色块) ---
+# --- 2. CSS 样式优化 ---
 st.markdown("""
     <style>
         .block-container {padding-top: 1rem; padding-bottom: 2rem;}
@@ -22,6 +22,7 @@ st.markdown("""
             align-items: center; 
             justify-content: center;
             width: 100%;
+            font-size: 16px !important; /*稍微调大字体让图标更清晰*/
         }
         /* 针对单选按钮组的容器进行微调 */
         div.row-widget.stRadio > div {flex-direction: row;}
@@ -163,7 +164,7 @@ with col_right:
         
         # 1. 提取并过滤 (剔除黑白)
         with st.spinner("正在智能提取颜色..."):
-            # 将 k_final 从 5 改为 2，只保留两个主色
+            # 只保留两个主色 (k_final=2)
             palette, counts = extract_palette_filtered(img_s, k_extract=10, k_final=2)
             total = sum(counts)
             
@@ -179,7 +180,6 @@ with col_right:
             st.caption("🎨 点击色块选择主色 (已过滤黑白):")
             
             # --- 动态生成色块按钮 ---
-            # 使用更大的列间距来适应更少的选项
             cols = st.columns(len(palette), gap="medium")
             for i, color_val in enumerate(palette):
                 with cols[i]:
@@ -187,16 +187,19 @@ with col_right:
                     is_sel = (i == st.session_state.selected_color_index)
                     percent = (counts[i]/total)*100
                     
-                    # CSS 魔法：把按钮变成有颜色的块
-                    # 注意：这里使用了 nth-of-type 来增强稳定性
+                    # 确定图标状态：选中用实心圆，未选空心圆
+                    icon = "◉" if is_sel else "○"
+                    label_text = f"{icon} {percent:.0f}%"
+
+                    # CSS 魔法：定制按钮样式
                     btn_css = f"""
                     <style>
                         div[data-testid="stHorizontalBlock"] .stButton:nth-of-type({i+1}) button {{
                             background-color: {hex_c} !important;
                             color: {'#000' if sum(color_val)>382 else '#fff'} !important;
-                            # 增强选中样式：边框更粗、颜色更红、有阴影和放大效果
+                            /* 选中的时候边框变红且加粗 */
                             border: {'4px solid #FF0000' if is_sel else '1px solid #ddd'} !important;
-                            height: 50px; # 稍微增加高度
+                            height: 50px;
                             box-shadow: {'0 6px 12px rgba(0,0,0,0.2)' if is_sel else 'none'} !important;
                             transform: {'scale(1.05)' if is_sel else 'scale(1)'} !important;
                             transition: all 0.2s ease-in-out !important;
@@ -205,7 +208,8 @@ with col_right:
                     """
                     st.markdown(btn_css, unsafe_allow_html=True)
                     
-                    if st.button(f"{percent:.0f}%", key=f"c_{i}"):
+                    # 显示带有图标的按钮
+                    if st.button(label_text, key=f"c_{i}"):
                         st.session_state.selected_color_index = i
                         st.rerun()
             
