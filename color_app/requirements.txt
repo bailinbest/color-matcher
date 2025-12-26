@@ -1,1 +1,6 @@
-streamlitnumpypillowscikit-learnscikit-image
+streamlit
+numpy
+Pillow
+scikit-learn
+scikit-image
+scipy
