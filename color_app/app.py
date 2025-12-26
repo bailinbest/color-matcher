@@ -163,7 +163,8 @@ with col_right:
         
         # 1. 提取并过滤 (剔除黑白)
         with st.spinner("正在智能提取颜色..."):
-            palette, counts = extract_palette_filtered(img_s, k_extract=10, k_final=5)
+            # 将 k_final 从 5 改为 2，只保留两个主色
+            palette, counts = extract_palette_filtered(img_s, k_extract=10, k_final=2)
             total = sum(counts)
             
         if st.session_state.selected_color_index >= len(palette):
@@ -178,7 +179,8 @@ with col_right:
             st.caption("🎨 点击色块选择主色 (已过滤黑白):")
             
             # --- 动态生成色块按钮 ---
-            cols = st.columns(len(palette))
+            # 使用更大的列间距来适应更少的选项
+            cols = st.columns(len(palette), gap="medium")
             for i, color_val in enumerate(palette):
                 with cols[i]:
                     hex_c = rgb_to_hex(color_val)
@@ -192,8 +194,12 @@ with col_right:
                         div[data-testid="stHorizontalBlock"] .stButton:nth-of-type({i+1}) button {{
                             background-color: {hex_c} !important;
                             color: {'#000' if sum(color_val)>382 else '#fff'} !important;
-                            border: {'3px solid #FF4B4B' if is_sel else '1px solid #ddd'} !important;
-                            height: 45px;
+                            # 增强选中样式：边框更粗、颜色更红、有阴影和放大效果
+                            border: {'4px solid #FF0000' if is_sel else '1px solid #ddd'} !important;
+                            height: 50px; # 稍微增加高度
+                            box-shadow: {'0 6px 12px rgba(0,0,0,0.2)' if is_sel else 'none'} !important;
+                            transform: {'scale(1.05)' if is_sel else 'scale(1)'} !important;
+                            transition: all 0.2s ease-in-out !important;
                         }}
                     </style>
                     """
