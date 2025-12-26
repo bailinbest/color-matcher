@@ -176,4 +176,104 @@ with col_left:
             t_colors, _ = extract_palette_filtered(img_target, k_extract=5, k_final=1)
             target_rgb = t_colors[0]
             tc1, tc2 = st.columns([2, 1])
-            with
+            with tc1:
+                display_color_compact(target_rgb, "提取结果", height=50)
+            with tc2:
+                st.image(img_target, width=80, caption="原图预览")
+
+# ================= 右侧：实物图 (Sample) =================
+with col_right:
+    st.subheader("2. 上传实物图")
+    st.caption("💡 提示：支持截图后粘贴保存为图片，再拖拽上传。")
+    uploaded_sample = st.file_uploader("上传实物照片", type=["jpg", "png", "jpeg", "webp"], key="s_up", label_visibility="collapsed")
+    
+    selected_sample_rgb = None
+    
+    if uploaded_sample:
+        img_sample = load_image(uploaded_sample)
+        
+        # 1. 提取并过滤颜色 (自动剔除黑白)
+        with st.spinner("正在分析并过滤背景色..."):
+            palette, counts = extract_palette_filtered(img_sample, k_extract=8, k_final=5)
+            total_pixels = sum(counts)
+        
+        # 确保索引不越界（当提取到的颜色少于之前的选择时）
+        if st.session_state.selected_color_index >= len(palette):
+            st.session_state.selected_color_index = 0
+
+        # 2. 布局
+        ic1, ic2 = st.columns([1, 2])
+        with ic1:
+            st.image(img_sample, caption="实物", use_container_width=True) 
+        
+        with ic2:
+            st.caption("🎨 请点击选择主色 (已自动剔除黑/白):")
+            
+            # --- 核心改进：参考图形式的单选 ---
+            # 使用 columns 布局创建一排按钮
+            cols = st.columns(len(palette))
+            for i, color_val in enumerate(palette):
+                with cols[i]:
+                    hex_c = rgb_to_hex(color_val)
+                    percent = (counts[i] / total_pixels) * 100
+                    # 判断是否被选中
+                    is_selected = (i == st.session_state.selected_color_index)
+                    
+                    # 动态生成 CSS 来将普通按钮改造成色块样式
+                    # 使用 nth-child 选择器定位到当前列里的按钮
+                    button_style = f"""
+                    <style>
+                        div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="stColumn"]:nth-child({i+1}) div.stButton > button {{
+                            background-color: {hex_c} !important;
+                            color: {'#000' if sum(color_val) > 382 else '#fff'} !important;
+                            border: {'3px solid #FF4B4B' if is_selected else '2px solid #eee'} !important;
+                            border-radius: 8px !important;
+                            height: 50px;
+                            font-weight: bold;
+                            font-family: monospace;
+                            box-shadow: {'0 4px 6px rgba(0,0,0,0.1)' if is_selected else 'none'};
+                            transition: all 0.2s ease-in-out;
+                        }}
+                        div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="stColumn"]:nth-child({i+1}) div.stButton > button:hover {{
+                             border: 3px solid #FF4B4B !important;
+                             transform: translateY(-2px);
+                        }}
+                    </style>
+                    """
+                    # 注入 CSS
+                    st.markdown(button_style, unsafe_allow_html=True)
+                    
+                    # 创建按钮，点击后更新 session_state 并强制刷新
+                    # 按钮文字显示占比
+                    if st.button(f"{percent:.0f}%", key=f"color_btn_{i}", help=f"点击选择此颜色: {hex_c}"):
+                        st.session_state.selected_color_index = i
+                        st.rerun()
+            
+            # 根据当前索引获取最终选定的颜色
+            if len(palette) > 0:
+                selected_sample_rgb = palette[st.session_state.selected_color_index]
+            
+            # 底部提示
+            st.caption("👆 点击色块进行选择，红色边框表示已选。")
+
+
+# ================= 底部：结果对比 =================
+st.markdown("---")
+
+if target_rgb is not None and selected_sample_rgb is not None:
+    delta_e, similarity = calculate_similarity_ciede2000(target_rgb, selected_sample_rgb)
+    with st.container():
+        st.markdown(f"### 🎯 匹配度: :rainbow[{similarity:.1f}%]")
+        st.progress(similarity / 100)
+        rc1, rc2, rc3, rc4 = st.columns([1.5, 1.5, 1, 2])
+        with rc1: display_color_compact(target_rgb, "标准", height=60, show_hex=True)
+        with rc2: display_color_compact(selected_sample_rgb, "实物", height=60, show_hex=True)
+        with rc3: st.metric("色差 (ΔE)", f"{delta_e:.2f}")
+        with rc4:
+            if delta_e < 2.0: st.success("✅ 完美匹配")
+            elif delta_e < 5.0: st.warning("⚠️ 轻微色差")
+            else: st.error("❌ 差异明显")
+            st.caption("ΔE < 2.0 为极佳")
+else:
+    if not uploaded_sample:
+        st.info("👈 请在上方上传实物图以开始对比。")
