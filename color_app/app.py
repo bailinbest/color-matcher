@@ -6,7 +6,7 @@ from skimage import color
 
 # --- 1. 页面配置 ---
 st.set_page_config(
-    page_title="色彩匹配助手 v3.0",
+    page_title="色彩匹配助手 v3.1",  # 更新版本号
     page_icon="🎨",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -139,7 +139,7 @@ def display_color_compact(rgb, label="", height=40, show_hex=True):
 if 'selected_color_index' not in st.session_state:
     st.session_state.selected_color_index = 0
 
-st.title("🎨 色彩匹配助手 (v3.0 最终版)")
+st.title("🎨 色彩匹配助手 (v3.1 最新版)") # 更新界面标题
 st.markdown("---")
 
 col_left, col_right = st.columns([1, 1], gap="medium")
